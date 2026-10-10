@@ -1,0 +1,846 @@
+Build a polished, responsive web app for me and my two friends to track shared expenses and repayments between the three of us.
+
+## Core Problem
+
+There are 3 people who regularly hang out and spend money together.
+
+We often don't settle expenses immediately. One person might pay the entire bill, and the other two pay that person back later.
+
+Example:
+
+* Total expense: $150
+* Person A paid the entire $150
+* The expense is split equally between A, B, and C
+* Therefore B owes A $50 and C owes A $50
+* Later B sends A $50
+* Later C sends A $50
+* Everyone is settled and the final balances should all be $0
+
+The app should keep track of **both expenses and repayments** and determine exactly who currently owes whom and how much.
+
+---
+
+# Main Goal
+
+The app should answer one question instantly:
+
+**"After accounting for every expense and every repayment, who needs to pay whom, and how much?"**
+
+It should calculate the mathematically correct balances and simplify the debts so the minimum practical number of payments is required.
+
+---
+
+# People
+
+There should be exactly 3 people by default:
+
+* Person A
+* Person B
+* Person C
+
+However, make their names editable so I can change them to our real names.
+
+Store the names in local storage.
+
+---
+
+# 1. Add Expense
+
+Create a clear form for adding an expense.
+
+Fields:
+
+* Who paid?
+* Amount
+* Date
+* Description
+* Category
+* Who participated in the expense?
+* How should the expense be split?
+
+Default behavior:
+
+The expense is split equally between everyone participating.
+
+Example:
+
+$150 expense with A, B, and C participating:
+
+A's share = $50
+B's share = $50
+C's share = $50
+
+If A paid $150:
+
+A is effectively owed $100
+B owes $50
+C owes $50
+
+### Important
+
+Allow custom splitting as a quality-of-life feature.
+
+For example:
+
+$100 expense:
+
+A = $20
+B = $30
+C = $50
+
+The custom shares must add up exactly to the total expense before the expense can be saved.
+
+Support both:
+
+* Equal split
+* Custom split
+
+Do not allow invalid expenses where the split doesn't equal the total amount.
+
+---
+
+# 2. Add Repayment / Transfer
+
+Create a separate form for recording money that one person sent to another.
+
+Fields:
+
+* Sender
+* Receiver
+* Amount
+* Date
+* Description / Note
+
+Example:
+
+B → A = $50
+
+This means B has paid A $50 and B's outstanding debt decreases by $50.
+
+The app must correctly handle transfers in either direction.
+
+Examples:
+
+A → B $20
+B → C $40
+C → A $15
+
+All of these should affect the final balances correctly.
+
+---
+
+# 3. Dashboard
+
+The main dashboard should immediately show the current financial state.
+
+Have a clear section for:
+
+### Current Balances
+
+Display each person's net balance.
+
+Example:
+
+A: +$100
+B: -$50
+C: -$50
+
+Explain visually that:
+
+* Positive = this person is owed money
+* Negative = this person owes money
+* $0 = completely settled
+
+Use clear visual styling to distinguish money owed vs money to receive.
+
+---
+
+# 4. Final Settlement
+
+This is the most important feature.
+
+Create a prominent section called something like:
+
+**"Who Owes Who?"**
+
+It should calculate the minimum/simple set of repayments needed to completely settle everyone.
+
+Example:
+
+A: +$100
+B: -$50
+C: -$50
+
+Display:
+
+B → A: $50
+C → A: $50
+
+Another example:
+
+A: +$100
+B: -$70
+C: -$30
+
+Display:
+
+B → A: $70
+C → A: $30
+
+Another example:
+
+A: +$150
+B: -$100
+C: -$50
+
+Display:
+
+B → A: $100
+C → A: $50
+
+The algorithm should work for arbitrary combinations of expenses and transfers.
+
+Use a debt-settlement algorithm that matches debtors against creditors and minimizes the number of transactions whenever possible.
+
+Do NOT simply show every historical expense as a separate debt.
+
+Instead, calculate each person's overall net position and then simplify it into the smallest practical set of settlement payments.
+
+---
+
+# 5. Accounting Logic
+
+Implement the accounting carefully.
+
+For every expense:
+
+1. The person who paid gets credit for the full amount they paid.
+2. Every participant gets charged their assigned share.
+3. Therefore:
+
+Net balance = amount personally paid - person's share of expenses
+
+Then incorporate repayments:
+
+If B pays A $50:
+
+* B's net position increases by $50
+* A's net position decreases by $50
+
+At the end:
+
+* Positive balances represent people who should receive money.
+* Negative balances represent people who need to pay money.
+* The sum of all balances must always equal approximately $0, allowing only for minor floating-point rounding.
+
+Example:
+
+Expense:
+A pays $150
+A/B/C split equally
+
+Before repayments:
+
+A = +100
+B = -50
+C = -50
+
+Then:
+
+B → A $50
+
+Balances:
+
+A = +50
+B = 0
+C = -50
+
+Then:
+
+C → A $50
+
+Balances:
+
+A = 0
+B = 0
+C = 0
+
+Show:
+
+**Everyone is settled ✓**
+
+---
+
+# 6. Transaction History
+
+Create a complete transaction history.
+
+Each expense should display:
+
+* Description
+* Amount
+* Person who paid
+* Participants
+* Split
+* Date
+* Category
+
+Each repayment should display:
+
+* Sender
+* Receiver
+* Amount
+* Date
+* Note
+
+Allow users to:
+
+* Edit
+* Delete
+* Duplicate an expense
+* Duplicate a repayment
+
+When editing or deleting something, automatically recalculate all balances.
+
+Add confirmation before deletion.
+
+---
+
+# 7. Summary / Statistics
+
+Add useful statistics such as:
+
+* Total money spent
+* Total number of expenses
+* Total repayments
+* How much each person has paid
+* How much each person has actually consumed
+* How much each person is currently owed
+* How much each person currently owes
+
+Example:
+
+Person A
+Paid: $640
+Personal share: $390
+Net: +$250
+
+Person B
+Paid: $220
+Personal share: $350
+Net: -$130
+
+Person C
+Paid: $0
+Personal share: $120
+Net: -$120
+
+---
+
+# 8. Categories
+
+Include useful expense categories:
+
+* Food
+* Gas
+* Travel
+* Hiking
+* Entertainment
+* Shopping
+* Accommodation
+* Tickets
+* Other
+
+Allow the user to create custom categories as well.
+
+---
+
+# 9. Date Filtering
+
+Add filters for:
+
+* All time
+* This month
+* Last month
+* This year
+* Custom date range
+
+The dashboard should update based on the selected period.
+
+Also allow sorting transactions by:
+
+* Newest
+* Oldest
+* Largest amount
+* Smallest amount
+
+---
+
+# 10. Search
+
+Add a search bar for transaction history.
+
+Allow searching descriptions, notes, and categories.
+
+---
+
+# 11. Settle All
+
+Add a button:
+
+**"Mark Everyone as Settled"**
+
+However, do NOT silently erase history.
+
+Instead, when clicked:
+
+1. Show the current required payments.
+2. Let the user confirm.
+3. Record the necessary settlement transfers automatically.
+4. Keep all previous expenses and transactions in history.
+5. Result should become $0 for everyone.
+
+For example:
+
+Current:
+
+B → A $75
+C → A $25
+
+Click "Settle All"
+
+Automatically create:
+
+B → A $75
+C → A $25
+
+Then show:
+
+**Everyone is settled ✓**
+
+---
+
+# 12. Undo / Restore
+
+Provide an easy way to undo the last transaction.
+
+Also consider storing deleted transactions temporarily so accidental deletions can be restored.
+
+---
+
+# 13. Local Storage
+
+This should work without requiring an account.
+
+Use browser localStorage for persistence.
+
+Refreshing the page must NOT delete the data.
+
+The app should work completely offline after loading.
+
+---
+
+# 14. Export / Import
+
+Add:
+
+**Export Data**
+
+Download all app data as JSON.
+
+Add:
+
+**Import Data**
+
+Allow the user to upload the JSON file and restore the data.
+
+Also add an optional CSV export for the transaction history.
+
+---
+
+# 15. Reset Data
+
+Add a "Reset Everything" option in settings.
+
+Require a strong confirmation before deleting all data.
+
+---
+
+# 16. Mobile-Friendly Design
+
+The app needs to work extremely well on phones because this is likely to be used while we're hanging out.
+
+Requirements:
+
+* Responsive layout
+* Large touch-friendly buttons
+* Forms that are easy to fill in
+* Bottom navigation or another mobile-friendly navigation system if appropriate
+* No horizontal scrolling
+* Currency amounts should be easy to read
+* Dashboard should make the current debt immediately obvious
+
+It should also look good on desktop.
+
+---
+
+# 17. UI / UX
+
+Make the design modern, clean, and polished.
+
+Think of a modern fintech/personal-finance interface rather than a generic CRUD application.
+
+Suggested sections:
+
+Dashboard
+Expenses
+Repayments
+History
+Statistics
+Settings
+
+The Dashboard should be the default screen.
+
+Use cards for:
+
+* Total spending
+* Current balances
+* Who owes whom
+* Recent activity
+
+Make the most important information visually dominant.
+
+The "Who Owes Who?" section should be impossible to miss.
+
+---
+
+# 18. Currency
+
+Use Canadian dollars by default:
+
+$ CAD
+
+Format money correctly to two decimal places.
+
+Example:
+
+$12.50
+$150.00
+
+Store currency as a setting so it can potentially be changed later.
+
+---
+
+# 19. Validation
+
+Implement strong validation.
+
+Examples:
+
+* Amount must be greater than $0
+* Sender and receiver cannot be the same person
+* Custom split must equal the expense total
+* Required fields cannot be blank
+* Dates must be valid
+* Prevent malformed imported data from breaking the app
+
+Handle rounding safely.
+
+Use integer cents internally where practical instead of relying purely on floating-point dollar calculations.
+
+For example:
+
+$10.99 should internally be represented as 1099 cents.
+
+---
+
+# 20. Important Edge Cases
+
+Make sure the accounting handles:
+
+* One person paying for themselves and one other person
+* Only two people participating in an expense
+* One person paying for all three
+* Multiple people paying different portions of the same activity
+* Multiple repayments between the same people
+* Repayments larger than the current direct debt but valid relative to the overall ledger
+* A person being both a creditor and debtor across different transactions
+* Expenses with custom splits
+* Lots of transactions
+* Deleting old transactions
+* Editing old transactions
+* Exact $0 settlement
+* Rounding to cents
+
+Do not hard-code the examples above. They are only examples of expected behavior.
+
+---
+
+# 21. Data Model
+
+Use a clean data model.
+
+For example:
+
+Person:
+
+* id
+* name
+
+Expense:
+
+* id
+* paidBy
+* amountCents
+* description
+* category
+* date
+* participants
+* splitType
+* shares
+* createdAt
+
+Transfer:
+
+* id
+* from
+* to
+* amountCents
+* date
+* note
+* createdAt
+
+Keep the architecture clean enough that it could later be extended from 3 people to more than 3 people, even though the initial UI has 3 people.
+
+---
+
+# 22. Tech Stack
+
+Use a modern stack suitable for a lightweight client-side app.
+
+Preferred:
+
+* React
+* TypeScript
+* Vite
+* Tailwind CSS
+
+Use a sensible component structure.
+
+Avoid unnecessary backend infrastructure.
+
+No authentication is necessary.
+
+No database is necessary for the first version because localStorage is sufficient.
+
+Use a reliable icon library such as Lucide.
+
+---
+
+# 23. Architecture
+
+Separate:
+
+* UI components
+* State management
+* Financial/accounting calculations
+* Storage
+* Settlement algorithm
+* Utility functions
+
+The debt calculation logic should be independent of React components so it can easily be tested.
+
+Create reusable functions such as:
+
+calculateBalances()
+calculateExpenseShares()
+calculateSettlement()
+applyTransfer()
+formatCurrency()
+
+---
+
+# 24. Testing
+
+Write tests for the core accounting logic.
+
+At minimum test:
+
+### Example 1
+
+A pays $150.
+A/B/C split equally.
+
+Expected:
+
+A +100
+B -50
+C -50
+
+### Example 2
+
+A pays $150.
+B sends A $50.
+C sends A $50.
+
+Expected:
+
+A 0
+B 0
+C 0
+
+### Example 3
+
+A pays $100.
+A/B split equally.
+
+Expected:
+
+A +50
+B -50
+C 0
+
+### Example 4
+
+A pays $300.
+A/B/C split:
+
+A $50
+B $100
+C $150
+
+Expected:
+
+A +250
+B -100
+C -150
+
+Then settlement should be:
+
+B → A $100
+C → A $150
+
+### Example 5
+
+Multiple expenses where different people pay:
+
+A pays $150
+B pays $90
+C pays $60
+
+with different splits.
+
+Verify that final balances are mathematically correct.
+
+Also test transfers and deletion/editing of transactions.
+
+---
+
+# 25. Quality of Life Features
+
+Add thoughtful features that make this genuinely useful in real life.
+
+Good additions include:
+
+* Quick-add expense button
+
+* Quick-add repayment button
+
+* Recent transactions
+
+* "You owe" and "You're owed" summaries
+
+* One-tap copying of settlement instructions
+
+* Copy settlement message such as:
+
+  "B owes A $35.50
+  C owes A $12.00"
+
+* Ability to attach an optional receipt image
+
+* Dark mode
+
+* Recently used categories
+
+* Default today's date when adding a transaction
+
+* Remember the last-used category
+
+* Keyboard shortcuts on desktop where appropriate
+
+Do not add unnecessary complexity just for the sake of having features.
+
+---
+
+# 26. Settlement Algorithm Requirement
+
+This part is extremely important.
+
+Do NOT calculate settlement by simply looking at each expense independently.
+
+First calculate:
+
+**Net balance for each person**
+
+Then separate:
+
+* Creditors: positive balance
+* Debtors: negative balance
+
+Match debtors against creditors until all balances reach zero.
+
+Try to minimize the number of settlement transactions.
+
+For example:
+
+A +$100
+B +$50
+C -$150
+
+Should produce:
+
+C → A $100
+C → B $50
+
+rather than generating unnecessary intermediate payments.
+
+Make sure the algorithm works when there are multiple creditors and multiple debtors.
+
+Use cents throughout the calculations to avoid floating-point errors.
+
+---
+
+# 27. Final Polish
+
+Before considering the project finished:
+
+* Make sure the app builds successfully.
+* Make sure there are no TypeScript errors.
+* Make sure all major interactions work.
+* Test refreshing the browser.
+* Test creating, editing, and deleting expenses.
+* Test repayments.
+* Test settlement calculations.
+* Test importing/exporting data.
+* Test mobile responsiveness.
+* Make sure empty states look polished.
+* Make sure error messages are clear.
+* Make sure there are no console errors.
+
+Seed the app with a few sample transactions on first launch only, so the UI isn't empty when I first open it. Clearly indicate that these are sample/demo transactions and provide a way to clear them.
+
+Do not use fake API calls or unnecessary external services.
+
+Build the application fully rather than giving me pseudocode or a partial implementation.
+
+After implementation, explain:
+
+1. What files/components were created
+2. How the accounting logic works
+3. How the settlement algorithm works
+4. How data persistence works
+5. How to run the app locally
+6. Any important design decisions you made
+
+Prioritize correctness of the money calculations above everything else.
