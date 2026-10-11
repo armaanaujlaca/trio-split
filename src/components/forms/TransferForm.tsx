@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { validateTransfer } from '../../lib/accounting';
 import { centsToDollarString, parseAmountToCents, todayISO } from '../../lib/format';
+import { sortPeople } from '../../lib/people';
 import { useToast } from '../ui/Toast';
+import { AddPersonChip } from '../ui/AddPersonChip';
 import type { PersonId, Transfer } from '../../types';
 import { ArrowRight, ArrowLeftRight } from 'lucide-react';
 
@@ -13,7 +15,8 @@ interface Props {
 }
 
 export function TransferForm({ initial, onDone, defaults }: Props) {
-  const people = useStore((s) => s.people);
+  const rawPeople = useStore((s) => s.people);
+  const people = useMemo(() => sortPeople(rawPeople), [rawPeople]);
   const addTransfer = useStore((s) => s.addTransfer);
   const updateTransfer = useStore((s) => s.updateTransfer);
   const toast = useToast();
@@ -123,6 +126,15 @@ export function TransferForm({ initial, onDone, defaults }: Props) {
         <span className="font-medium">{people.find((p) => p.id === from)?.name ?? '—'}</span>
         <ArrowRight className="w-4 h-4 mx-2" />
         <span className="font-medium">{people.find((p) => p.id === to)?.name ?? '—'}</span>
+      </div>
+
+      <div className="flex justify-end">
+        <AddPersonChip
+          placeholder="New name…"
+          // No auto-select here (sender/receiver is one person each and the user
+          // may be adding someone to pick on either side), but the dropdowns
+          // refresh instantly so they can pick the new person next.
+        />
       </div>
 
       <div>

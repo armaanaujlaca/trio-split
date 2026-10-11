@@ -4,9 +4,9 @@ import { DEFAULT_CATEGORIES } from './categories';
 
 export function makeInitialState(): AppState {
   const people = [
-    { id: 'p_a', name: 'Armaan' },
-    { id: 'p_b', name: 'Roohaniat' },
-    { id: 'p_c', name: 'Sam' },
+    { id: 'p_a', name: 'Armaan', favorite: true },
+    { id: 'p_b', name: 'Roohaniat', favorite: true },
+    { id: 'p_c', name: 'Sam', favorite: true },
   ];
   const [a, b, c] = people.map((p) => p.id);
 
@@ -102,9 +102,9 @@ export function makeInitialState(): AppState {
 export function makeEmptyState(): AppState {
   return {
     people: [
-      { id: 'p_a', name: 'Armaan' },
-      { id: 'p_b', name: 'Roohaniat' },
-      { id: 'p_c', name: 'Sam' },
+      { id: 'p_a', name: 'Armaan', favorite: true },
+      { id: 'p_b', name: 'Roohaniat', favorite: true },
+      { id: 'p_c', name: 'Sam', favorite: true },
     ],
     transactions: [],
     categories: [...DEFAULT_CATEGORIES],

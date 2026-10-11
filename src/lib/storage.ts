@@ -4,33 +4,49 @@ const KEY = 'trio-split:v1';
 
 /**
  * Migrate older saved shapes to the current one.
- * v1 expenses had a single `paidBy: PersonId` field; they're now stored as
- * `payments: { personId, amountCents }[]` so an expense can have multiple payers.
+ *  - v1 expenses had a single `paidBy: PersonId` field; they're now stored as
+ *    `payments: { personId, amountCents }[]` so an expense can have multiple payers.
+ *  - People didn't have a `favorite` flag; the original three ids (p_a/b/c) are
+ *    backfilled as favorites so existing synced data keeps the expected ordering.
  */
 export function migrateState(raw: unknown): unknown {
   if (!raw || typeof raw !== 'object') return raw;
   const s = raw as Record<string, unknown>;
-  if (!Array.isArray(s.transactions)) return raw;
 
-  const transactions = s.transactions.map((t) => {
-    if (
-      t &&
-      typeof t === 'object' &&
-      (t as Record<string, unknown>).type === 'expense' &&
-      !Array.isArray((t as Record<string, unknown>).payments) &&
-      typeof (t as Record<string, unknown>).paidBy === 'string'
-    ) {
-      const rec = t as Record<string, unknown>;
-      const { paidBy, ...rest } = rec;
-      return {
-        ...rest,
-        payments: [{ personId: paidBy, amountCents: rec.amountCents }],
-      };
-    }
-    return t;
-  });
+  const transactions = Array.isArray(s.transactions)
+    ? s.transactions.map((t) => {
+        if (
+          t &&
+          typeof t === 'object' &&
+          (t as Record<string, unknown>).type === 'expense' &&
+          !Array.isArray((t as Record<string, unknown>).payments) &&
+          typeof (t as Record<string, unknown>).paidBy === 'string'
+        ) {
+          const rec = t as Record<string, unknown>;
+          const { paidBy, ...rest } = rec;
+          return {
+            ...rest,
+            payments: [{ personId: paidBy, amountCents: rec.amountCents }],
+          };
+        }
+        return t;
+      })
+    : s.transactions;
 
-  return { ...s, transactions };
+  const LEGACY_FAVORITE_IDS = new Set(['p_a', 'p_b', 'p_c']);
+  const people = Array.isArray(s.people)
+    ? s.people.map((p) => {
+        if (p && typeof p === 'object') {
+          const rec = p as Record<string, unknown>;
+          if (rec.favorite === undefined && typeof rec.id === 'string' && LEGACY_FAVORITE_IDS.has(rec.id)) {
+            return { ...rec, favorite: true };
+          }
+        }
+        return p;
+      })
+    : s.people;
+
+  return { ...s, people, transactions };
 }
 
 export function loadState(): AppState | null {

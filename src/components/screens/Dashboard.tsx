@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { calculateBalances } from '../../lib/accounting';
+import { sortPeople } from '../../lib/people';
 import { calculateSettlement, isAllSettled } from '../../lib/settlement';
 import {
   formatCurrency,
@@ -30,7 +31,8 @@ interface Props {
 }
 
 export function Dashboard({ onNavigate }: Props) {
-  const people = useStore((s) => s.people);
+  const rawPeople = useStore((s) => s.people);
+  const people = useMemo(() => sortPeople(rawPeople), [rawPeople]);
   const transactions = useStore((s) => s.transactions);
   const currency = useStore((s) => s.settings.currency);
   const settleAll = useStore((s) => s.settleAll);

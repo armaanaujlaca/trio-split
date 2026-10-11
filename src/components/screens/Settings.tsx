@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { useToast } from '../ui/Toast';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
@@ -7,17 +7,24 @@ import {
   Download,
   FileDown,
   Moon,
+  Plus,
   RotateCcw,
+  Star,
   Sun,
   Trash2,
   Upload,
 } from 'lucide-react';
 import { formatCurrency, formatDate } from '../../lib/format';
 import { isValidState, migrateState } from '../../lib/storage';
+import { personHasHistory, sortPeople } from '../../lib/people';
 
 export function Settings() {
-  const people = useStore((s) => s.people);
+  const rawPeople = useStore((s) => s.people);
+  const people = useMemo(() => sortPeople(rawPeople), [rawPeople]);
   const renamePerson = useStore((s) => s.renamePerson);
+  const addPerson = useStore((s) => s.addPerson);
+  const removePerson = useStore((s) => s.removePerson);
+  const togglePersonFavorite = useStore((s) => s.togglePersonFavorite);
   const dark = useStore((s) => s.settings.dark);
   const seeded = useStore((s) => s.settings.seeded);
   const currency = useStore((s) => s.settings.currency);
@@ -142,18 +149,68 @@ export function Settings() {
       <section className="card p-5">
         <h3 className="text-base font-semibold mb-3">People</h3>
         <p className="text-sm text-slate-500 dark:text-slate-400 mb-3">
-          Rename the three people to match your group.
+          Favorites (★) are pinned to the start of every picker. Rename anyone by
+          editing their name. People with any transaction history can't be
+          deleted (deleting them would strand those records).
         </p>
         <div className="space-y-2">
-          {people.map((p) => (
-            <input
-              key={p.id}
-              className="input"
-              value={p.name}
-              onChange={(e) => renamePerson(p.id, e.target.value)}
-            />
-          ))}
+          {people.map((p) => {
+            const hasHistory = personHasHistory(p.id, transactions);
+            const isLast = people.length <= 1;
+            return (
+              <div key={p.id} className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => togglePersonFavorite(p.id)}
+                  className="btn-ghost !px-2 !py-2"
+                  aria-label={p.favorite ? 'Unfavorite' : 'Favorite'}
+                  title={p.favorite ? 'Favorite (pinned)' : 'Mark as favorite'}
+                >
+                  <Star
+                    className={`w-4 h-4 ${
+                      p.favorite ? 'fill-amber-400 text-amber-400' : 'text-slate-400'
+                    }`}
+                  />
+                </button>
+                <input
+                  className="input flex-1"
+                  value={p.name}
+                  onChange={(e) => renamePerson(p.id, e.target.value)}
+                />
+                <button
+                  type="button"
+                  disabled={hasHistory || isLast}
+                  onClick={() => {
+                    const result = removePerson(p.id);
+                    if (!result.ok) {
+                      toast.show(
+                        result.reason === 'has_history'
+                          ? 'Can\'t remove someone with transaction history'
+                          : 'Need at least one person',
+                        { variant: 'error' },
+                      );
+                    } else {
+                      toast.show(`Removed ${p.name}`);
+                    }
+                  }}
+                  className="btn-ghost !px-2 !py-2 text-rose-600 dark:text-rose-400 disabled:text-slate-300 dark:disabled:text-slate-600"
+                  aria-label={`Remove ${p.name}`}
+                  title={
+                    hasHistory
+                      ? 'Has transaction history — delete those first to remove this person'
+                      : isLast
+                        ? 'Need at least one person'
+                        : `Remove ${p.name}`
+                  }
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            );
+          })}
         </div>
+
+        <AddPersonInline onAdd={addPerson} />
       </section>
 
       <section className="card p-5">
@@ -270,6 +327,65 @@ export function Settings() {
           toast.show('All data reset');
         }}
       />
+    </div>
+  );
+}
+
+function AddPersonInline({
+  onAdd,
+}: {
+  onAdd: ReturnType<typeof useStore.getState>['addPerson'];
+}) {
+  const [name, setName] = useState('');
+  const [favorite, setFavorite] = useState(false);
+  const toast = useToast();
+
+  const submit = () => {
+    if (!name.trim()) return;
+    const result = onAdd(name, { favorite });
+    if (result) {
+      toast.show(`Added ${result.name}`);
+      setName('');
+      setFavorite(false);
+    }
+  };
+
+  return (
+    <div className="mt-3 flex items-center gap-2">
+      <button
+        type="button"
+        onClick={() => setFavorite((v) => !v)}
+        className="btn-ghost !px-2 !py-2"
+        aria-label={favorite ? 'Add as favorite' : 'Add as regular'}
+        title={favorite ? 'Will be added as favorite' : 'Click to add as favorite'}
+      >
+        <Star
+          className={`w-4 h-4 ${
+            favorite ? 'fill-amber-400 text-amber-400' : 'text-slate-400'
+          }`}
+        />
+      </button>
+      <input
+        className="input flex-1"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            submit();
+          }
+        }}
+        placeholder="Add new person…"
+      />
+      <button
+        type="button"
+        className="btn-primary !px-3 !py-2"
+        onClick={submit}
+        disabled={!name.trim()}
+        aria-label="Add person"
+      >
+        <Plus className="w-4 h-4" />
+      </button>
     </div>
   );
 }

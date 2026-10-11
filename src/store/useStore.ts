@@ -5,6 +5,7 @@ import { makeEmptyState, makeInitialState } from '../lib/sample';
 import { newId } from '../lib/id';
 import { calculateBalances } from '../lib/accounting';
 import { calculateSettlement } from '../lib/settlement';
+import { personHasHistory } from '../lib/people';
 import {
   fetchRemoteState,
   mergeStates,
@@ -36,6 +37,9 @@ interface StoreState extends AppState {
   restoreFromTrash: (id: string) => void;
 
   renamePerson: (id: string, name: string) => void;
+  addPerson: (name: string, options?: { favorite?: boolean }) => Person | null;
+  removePerson: (id: string) => { ok: boolean; reason?: 'has_history' | 'last_person' };
+  togglePersonFavorite: (id: string) => void;
   addCategory: (name: string) => void;
   removeCategory: (name: string) => void;
   settleAll: () => Transfer[];
@@ -217,6 +221,50 @@ export const useStore = create<StoreState>((set, get) => ({
       withUndo('Rename person', state, (draft) => ({
         ...draft,
         people: draft.people.map((p: Person) => (p.id === id ? { ...p, name } : p)),
+      })),
+    );
+  },
+
+  addPerson: (name, options) => {
+    const trimmed = name.trim();
+    if (!trimmed) return null;
+    // Reject duplicates (case-insensitive) so adding the same person twice
+    // doesn't fracture their balance across two ids.
+    const existing = get().people.find(
+      (p) => p.name.trim().toLowerCase() === trimmed.toLowerCase(),
+    );
+    if (existing) return existing;
+    const person: Person = { id: newId('person'), name: trimmed };
+    if (options?.favorite) person.favorite = true;
+    set((state) =>
+      withUndo('Add person', state, (draft) => ({
+        ...draft,
+        people: [...draft.people, person],
+      })),
+    );
+    return person;
+  },
+
+  removePerson: (id) => {
+    const state = get();
+    if (state.people.length <= 1) return { ok: false, reason: 'last_person' };
+    if (personHasHistory(id, state.transactions)) {
+      return { ok: false, reason: 'has_history' };
+    }
+    set((s) =>
+      withUndo('Remove person', s, (draft) => ({
+        ...draft,
+        people: draft.people.filter((p) => p.id !== id),
+      })),
+    );
+    return { ok: true };
+  },
+
+  togglePersonFavorite: (id) => {
+    set((state) =>
+      withUndo('Toggle favorite', state, (draft) => ({
+        ...draft,
+        people: draft.people.map((p) => (p.id === id ? { ...p, favorite: !p.favorite } : p)),
       })),
     );
   },

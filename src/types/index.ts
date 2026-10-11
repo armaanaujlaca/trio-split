@@ -3,6 +3,8 @@ export type PersonId = string;
 export interface Person {
   id: PersonId;
   name: string;
+  /** Favorites are pinned to the start of every people picker. */
+  favorite?: boolean;
 }
 
 export type SplitType = 'equal' | 'custom';

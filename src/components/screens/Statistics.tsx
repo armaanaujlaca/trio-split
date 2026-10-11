@@ -2,9 +2,11 @@ import { useMemo } from 'react';
 import { useStore } from '../../store/useStore';
 import { calculateBalances, perPersonStats } from '../../lib/accounting';
 import { formatCurrency, formatSignedCurrency } from '../../lib/format';
+import { sortPeople } from '../../lib/people';
 
 export function Statistics() {
-  const people = useStore((s) => s.people);
+  const rawPeople = useStore((s) => s.people);
+  const people = useMemo(() => sortPeople(rawPeople), [rawPeople]);
   const transactions = useStore((s) => s.transactions);
   const currency = useStore((s) => s.settings.currency);
 

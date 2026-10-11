@@ -5,7 +5,9 @@ import {
   validateExpense,
 } from '../../lib/accounting';
 import { centsToDollarString, parseAmountToCents, todayISO } from '../../lib/format';
+import { sortPeople } from '../../lib/people';
 import { useToast } from '../ui/Toast';
+import { AddPersonChip } from '../ui/AddPersonChip';
 import type { Expense, ExpensePayment, ExpenseShare, PersonId, SplitType } from '../../types';
 import { Plus } from 'lucide-react';
 
@@ -17,7 +19,8 @@ interface Props {
 const LAST_CATEGORY_KEY = 'trio-split:lastCategory';
 
 export function ExpenseForm({ initial, onDone }: Props) {
-  const people = useStore((s) => s.people);
+  const rawPeople = useStore((s) => s.people);
+  const people = useMemo(() => sortPeople(rawPeople), [rawPeople]);
   const categories = useStore((s) => s.categories);
   const addExpense = useStore((s) => s.addExpense);
   const updateExpense = useStore((s) => s.updateExpense);
@@ -192,6 +195,14 @@ export function ExpenseForm({ initial, onDone }: Props) {
               {p.name}
             </button>
           ))}
+          <AddPersonChip
+            onAdded={(id) => {
+              // Clicking + in "Who paid?" implicitly selects them as both a
+              // payer and a participant for this expense.
+              setPayers((cur) => (cur.includes(id) ? cur : [...cur, id]));
+              setParticipants((cur) => (cur.includes(id) ? cur : [...cur, id]));
+            }}
+          />
         </div>
 
         {payers.length > 1 && (
@@ -326,6 +337,11 @@ export function ExpenseForm({ initial, onDone }: Props) {
               {p.name}
             </button>
           ))}
+          <AddPersonChip
+            onAdded={(id) =>
+              setParticipants((cur) => (cur.includes(id) ? cur : [...cur, id]))
+            }
+          />
         </div>
       </div>
 
